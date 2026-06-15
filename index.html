@@ -1391,7 +1391,10 @@ function renderGrowth() {
             align: ctx => {
               const v = Math.abs(ctx.dataset.data[ctx.dataIndex] || 0);
               const mx = Math.max(...ctx.dataset.data.map(d => Math.abs(d||0)));
-              return mx > 0 && v/mx < 0.25 ? 'end' : 'center';
+              if (mx > 0 && v/mx < 0.25) {
+                return (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'start' : 'end';
+              }
+              return 'center';
             },
             formatter: (v, ctx) => {
               if (v === null) return '';
