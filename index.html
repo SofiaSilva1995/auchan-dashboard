@@ -241,7 +241,11 @@ table.dt tr:hover td{background:#f8fafc}
     <div class="chart-card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <h5 style="margin:0">Evolução Mensal por Categoria (€)</h5>
-        <button onclick="document.getElementById('fCat').value='';applyFilters()" style="font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:#f8fafc;color:var(--muted);cursor:pointer;font-weight:600">Resetar</button>
+        <div style="display:flex;gap:6px" id="catEvolToggle">
+          <button onclick="setCatEvolView('2025')" class="btn-evol" id="cevol-2025">2025</button>
+          <button onclick="setCatEvolView('2026')" class="btn-evol" id="cevol-2026">2026</button>
+          <button onclick="setCatEvolView('all')" class="btn-evol btn-evol-active" id="cevol-all">Todos</button>
+        </div>
       </div>
       <canvas id="chartCatEvol" height="280"></canvas>
     </div>
@@ -418,6 +422,7 @@ if (typeof ChartDataLabels !== 'undefined') {
 let F = { period: 'ytd2026', brand: '', cat: '', store: '', cnp: '' };
 let activeTab = 'exec';
 let _brandEvolView = 'all';
+let _catEvolView = 'all';
 
 // ─── INIT DROPDOWNS ──────────────────────────────────────────────────────────
 function initFilters() {
@@ -940,6 +945,10 @@ function setBrandEvolView(v) {
   _brandEvolView = v;
   renderBrands();
 }
+function setCatEvolView(v) {
+  _catEvolView = v;
+  renderCats();
+}
 
 function renderBrands() {
   const pm = getPeriodMonths();
@@ -1180,13 +1189,16 @@ function renderCats() {
 
   // Monthly evol by cat
   const allMonths = [...DATA.ym_2025,...DATA.ym_2026];
+  const catEvolMonths = _catEvolView === '2025' ? DATA.ym_2025
+                      : _catEvolView === '2026' ? DATA.ym_2026
+                      : allMonths;
   destroyChart('chartCatEvol');
   CH['chartCatEvol'] = new Chart(document.getElementById('chartCatEvol'), {
     type: 'line',
     data: {
-      labels: allMonths.map(ym=>DATA.month_labels[ym]),
+      labels: catEvolMonths.map(ym=>DATA.month_labels[ym]),
       datasets: cats.map(c => {
-        const vals = allMonths.map(ym => {
+        const vals = catEvolMonths.map(ym => {
           let d;
           if (F.brand) d=sumBCM(F.brand,c,[ym]);
           else if (F.store) d=sumSCM(F.store,c,[ym]);
@@ -1201,6 +1213,12 @@ function renderCats() {
       plugins:{ tooltip:{ callbacks:{ label: c=>` ${c.dataset.label}: €${fmt(c.parsed.y)}` } } },
       scales:{ y:{ ticks:{ callback: v=>'€'+fmt(v) } } }
     }
+  });
+
+  // Actualizar estado visual botões cat evol
+  ['all','2025','2026'].forEach(v => {
+    const btn = document.getElementById('cevol-'+v);
+    if (btn) btn.classList.toggle('btn-evol-active', v === _catEvolView);
   });
 
   destroyChart('chartCatGrowth');
