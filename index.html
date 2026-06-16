@@ -1048,18 +1048,14 @@ function renderBrands() {
         tooltip: { callbacks: { label: c => ' €' + fmt(c.parsed.y) } },
         datalabels: {
           display: ctx => ctx.datasetIndex === 0,
-          anchor: 'end', align: 'end',
+          anchor: 'center', align: 'center',
           formatter: (v, ctx) => {
             const g = bRows[ctx.dataIndex]?.grow;
             if (g === null || g === undefined) return '';
             return (g >= 0 ? '+' : '') + g.toFixed(1) + '% vs LY';
           },
           font: { size: 9, weight: 'bold' },
-          color: ctx => {
-            const g = bRows[ctx.dataIndex]?.grow;
-            return (g !== null && g >= 0) ? '#10b981' : '#ef4444';
-          },
-          padding: { bottom: 2 }
+          color: '#fff'
         }
       },
       scales: { y: { ticks: { callback: v => '€'+fmt(v) } } }
@@ -1401,8 +1397,8 @@ function renderGrowth() {
           } } },
           datalabels: {
             display: true,
-            anchor: 'end',
-            align: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'left' : 'right',
+            anchor: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'start' : 'end',
+            align: 'right',
             formatter: (v, ctx) => {
               if (v === null) return '';
               if (field === 'delta') {
@@ -1414,12 +1410,10 @@ function renderGrowth() {
               return fmtPct(v);
             },
             color: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) >= 0 ? '#10b981' : '#ef4444',
-            font: { size: 9, weight: 'bold' },
-            textStrokeColor: 'transparent',
-            textStrokeWidth: 0
+            font: { size: 9, weight: 'bold' }
           }
         },
-        layout: { padding: { left: isNeg ? 140 : 8, right: isNeg ? 8 : 140 } },
+        layout: { padding: { left: 8, right: 160 } },
         scales:{ x:{ ticks:{ callback: v=>field==='delta'?'€'+fmt(v):v.toFixed(0)+'%' } } }
       }
     });
