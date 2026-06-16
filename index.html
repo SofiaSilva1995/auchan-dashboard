@@ -957,7 +957,7 @@ function setBrandEvolView(v) {
 }
 function resetBrandEvol() {
   const c = CH['chartBrandEvol'];
-  if (c) { c.data.datasets.forEach(ds => { ds.hidden = false; }); c.update(); }
+  if (c) { c.data.datasets.forEach((ds, i) => { c.getDatasetMeta(i).hidden = false; }); c.update(); }
 }
 function setCatEvolView(v) {
   _catEvolView = v;
@@ -965,7 +965,7 @@ function setCatEvolView(v) {
 }
 function resetCatEvol() {
   const c = CH['chartCatEvol'];
-  if (c) { c.data.datasets.forEach(ds => { ds.hidden = false; }); c.update(); }
+  if (c) { c.data.datasets.forEach((ds, i) => { c.getDatasetMeta(i).hidden = false; }); c.update(); }
 }
 
 function renderBrands() {
@@ -1079,6 +1079,7 @@ function renderBrands() {
           }
         }
       },
+      layout: { padding: { top: 28 } },
       scales: { y: { ticks: { callback: v => '€'+fmt(v) } } }
     }
   });
