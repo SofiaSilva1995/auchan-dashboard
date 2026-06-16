@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - '*.xlsx'
+      - '*.xlsb'
+      - '*.csv'
   workflow_dispatch:
 
 permissions:
@@ -18,35 +20,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verificar Excel
-        id: check_excel
+      - name: Verificar ficheiro de dados
+        id: check_data
         run: |
-          XLSX=$(ls *.xlsx 2>/dev/null | head -1)
-          if [ -z "$XLSX" ]; then
-            echo "Nenhum ficheiro .xlsx encontrado no repo."
-            echo "Para gerar o dashboard, faz upload do ficheiro .xlsx para a raiz do repo."
+          DATA=$(ls *.xlsx *.xlsb *.csv 2>/dev/null | grep -iv produtos | head -1)
+          if [ -z "$DATA" ]; then
+            echo "Nenhum ficheiro de dados encontrado (.xlsx, .xlsb ou .csv)."
+            echo "Faz upload do ficheiro para a raiz do repo e commite."
             echo "found=false" >> $GITHUB_OUTPUT
           else
-            echo "Excel encontrado: $XLSX"
+            echo "Ficheiro encontrado: $DATA"
             echo "found=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Python 3.11
-        if: steps.check_excel.outputs.found == 'true'
+        if: steps.check_data.outputs.found == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Instalar dependencias
-        if: steps.check_excel.outputs.found == 'true'
-        run: pip install pandas openpyxl
+        if: steps.check_data.outputs.found == 'true'
+        run: pip install pandas openpyxl pyxlsb
 
       - name: Gerar Dashboard
-        if: steps.check_excel.outputs.found == 'true'
+        if: steps.check_data.outputs.found == 'true'
         run: python gerar_dashboard.py
 
       - name: Enviar email
-        if: steps.check_excel.outputs.found == 'true'
+        if: steps.check_data.outputs.found == 'true'
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
@@ -96,7 +98,7 @@ jobs:
           PYEOF
 
       - name: Commit dashboard ao repo
-        if: steps.check_excel.outputs.found == 'true'
+        if: steps.check_data.outputs.found == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
