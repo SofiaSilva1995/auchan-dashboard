@@ -1051,7 +1051,30 @@ function renderBrands() {
 
   destroyChart('chartBrandCmp');
   CH['chartBrandCmp'] = new Chart(document.getElementById('chartBrandCmp'), {
-    plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
+    plugins: [
+      typeof ChartDataLabels !== 'undefined' ? ChartDataLabels : null,
+      {
+        afterDraw(chart) {
+          const ctx2 = chart.ctx;
+          bRows.forEach((r, i) => {
+            if (r.grow === null) return;
+            const m0 = chart.getDatasetMeta(0), m1 = chart.getDatasetMeta(1);
+            const b0 = m0.data[i], b1 = m1.data[i];
+            if (!b0 || !b1) return;
+            const xC = (b0.x + b1.x) / 2;
+            const yTop = Math.min(b0.y, b1.y) - 5;
+            const txt = (r.grow >= 0 ? '+' : '') + r.grow.toFixed(1) + '% vs LY';
+            ctx2.save();
+            ctx2.font = 'bold 9px Inter,sans-serif';
+            ctx2.fillStyle = r.grow >= 0 ? '#10b981' : '#ef4444';
+            ctx2.textAlign = 'center';
+            ctx2.textBaseline = 'bottom';
+            ctx2.fillText(txt, xC, yTop);
+            ctx2.restore();
+          });
+        }
+      }
+    ].filter(Boolean),
     type: 'bar',
     data: {
       labels: bRows.map(r => r.brand),
@@ -1063,30 +1086,12 @@ function renderBrands() {
     options: {
       responsive: true,
       plugins: {
+        legend: { display: false },
         tooltip: { callbacks: { label: c => ' €' + fmt(c.parsed.y) } },
-        datalabels: {
-          display: ctx => {
-            const r = bRows[ctx.dataIndex];
-            if (!r || r.grow === null) return false;
-            if (ctx.datasetIndex === 0) return r.cy >= r.ly;
-            if (ctx.datasetIndex === 1) return r.ly > r.cy;
-            return false;
-          },
-          anchor: 'end', align: 'end',
-          formatter: (v, ctx) => {
-            const g = bRows[ctx.dataIndex]?.grow;
-            if (g === null || g === undefined) return '';
-            return (g >= 0 ? '+' : '') + g.toFixed(1) + '% vs LY';
-          },
-          font: { size: 9, weight: 'bold' },
-          color: ctx => {
-            const g = bRows[ctx.dataIndex]?.grow;
-            return (g !== null && g >= 0) ? '#10b981' : '#ef4444';
-          }
-        }
+        datalabels: { display: false }
       },
-      layout: { padding: { top: 28 } },
-      scales: { y: { grace: '15%', ticks: { callback: v => '€'+fmt(v) } } }
+      layout: { padding: { top: 20 } },
+      scales: { y: { grace: '12%', ticks: { callback: v => '€'+fmt(v) } } }
     }
   });
 
@@ -1165,7 +1170,30 @@ function renderCats() {
 
   destroyChart('chartCatCmp');
   CH['chartCatCmp'] = new Chart(document.getElementById('chartCatCmp'), {
-    plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
+    plugins: [
+      typeof ChartDataLabels !== 'undefined' ? ChartDataLabels : null,
+      {
+        afterDraw(chart) {
+          const ctx2 = chart.ctx;
+          cRows.forEach((r, i) => {
+            if (r.grow === null) return;
+            const m0 = chart.getDatasetMeta(0), m1 = chart.getDatasetMeta(1);
+            const b0 = m0.data[i], b1 = m1.data[i];
+            if (!b0 || !b1) return;
+            const xRight = Math.max(b0.x, b1.x) + 5;
+            const yC = (b0.y + b1.y) / 2;
+            const txt = (r.grow >= 0 ? '+' : '') + r.grow.toFixed(1) + '% vs LY';
+            ctx2.save();
+            ctx2.font = 'bold 9px Inter,sans-serif';
+            ctx2.fillStyle = r.grow >= 0 ? '#10b981' : '#ef4444';
+            ctx2.textAlign = 'left';
+            ctx2.textBaseline = 'middle';
+            ctx2.fillText(txt, xRight, yC);
+            ctx2.restore();
+          });
+        }
+      }
+    ].filter(Boolean),
     type: 'bar',
     data: {
       labels: cRows.map(r=>r.cat),
@@ -1177,41 +1205,9 @@ function renderCats() {
     options: {
       indexAxis:'y', responsive:true,
       plugins:{
+        legend:{ display:false },
         tooltip:{ callbacks:{ label: c=>' €'+fmt(c.parsed.x) } },
-        datalabels: {
-          labels: {
-            val: {
-              display: false,
-              anchor: 'center', align: 'center',
-              formatter: (v, ctx) => {
-                if (!v || v < 100) return '';
-                return v >= 10000 ? '€'+(v/1000).toFixed(0)+'k' : '€'+fmt(v,0);
-              },
-              font: { size: 9, weight: 'bold' },
-              color: ctx => ctx.datasetIndex === 0 ? '#fff' : '#334155'
-            },
-            pct: {
-              display: ctx => {
-                const r = cRows[ctx.dataIndex];
-                if (!r || r.grow === null) return false;
-                if (ctx.datasetIndex === 0) return r.cy >= r.ly;
-                if (ctx.datasetIndex === 1) return r.ly > r.cy;
-                return false;
-              },
-              anchor: 'end', align: 'end',
-              formatter: (v, ctx) => {
-                const g = cRows[ctx.dataIndex]?.grow;
-                if (g === null || g === undefined) return '';
-                return (g >= 0 ? '+' : '') + g.toFixed(1) + '% vs LY';
-              },
-              font: { size: 9, weight: 'bold' },
-              color: ctx => {
-                const g = cRows[ctx.dataIndex]?.grow;
-                return (g !== null && g >= 0) ? '#10b981' : '#ef4444';
-              }
-            }
-          }
-        }
+        datalabels: { display: false }
       },
       scales:{ x:{ grace:'15%', ticks:{ callback: v=>'€'+fmt(v) } } }
     }
