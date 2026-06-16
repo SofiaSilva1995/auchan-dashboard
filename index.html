@@ -1167,7 +1167,7 @@ function renderCats() {
               color: ctx => ctx.datasetIndex === 0 ? '#fff' : '#334155'
             },
             pct: {
-              display: ctx => ctx.datasetIndex === 0,
+              display: ctx => ctx.datasetIndex === 0 && (ctx.dataset.data[ctx.dataIndex] || 0) > 0,
               anchor: 'end', align: 'end',
               formatter: (v, ctx) => {
                 const g = cRows[ctx.dataIndex]?.grow;
@@ -1401,26 +1401,10 @@ function renderGrowth() {
           } } },
           datalabels: {
             display: true,
-            anchor: ctx => {
-              const v = Math.abs(ctx.dataset.data[ctx.dataIndex] || 0);
-              const mx = Math.max(...ctx.dataset.data.map(d => Math.abs(d||0)));
-              return mx > 0 && v/mx < 0.25 ? 'end' : 'center';
-            },
-            align: ctx => {
-              const v = Math.abs(ctx.dataset.data[ctx.dataIndex] || 0);
-              const mx = Math.max(...ctx.dataset.data.map(d => Math.abs(d||0)));
-              if (mx > 0 && v/mx < 0.25) {
-                return (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'start' : 'end';
-              }
-              return 'center';
-            },
+            anchor: 'end',
+            align: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'start' : 'end',
             formatter: (v, ctx) => {
               if (v === null) return '';
-              const isOut = (() => {
-                const av = Math.abs(v||0);
-                const mx = Math.max(...ctx.dataset.data.map(d => Math.abs(d||0)));
-                return mx > 0 && av/mx < 0.25;
-              })();
               if (field === 'delta') {
                 const eur = Math.abs(v)>=10000?'€'+(v/1000).toFixed(0)+'k':'€'+fmt(v,0);
                 const d = data[ctx.dataIndex];
@@ -1429,21 +1413,13 @@ function renderGrowth() {
               }
               return fmtPct(v);
             },
-            color: ctx => {
-              const v = Math.abs(ctx.dataset.data[ctx.dataIndex] || 0);
-              const mx = Math.max(...ctx.dataset.data.map(d => Math.abs(d||0)));
-              if (mx > 0 && v/mx < 0.25) return (ctx.dataset.data[ctx.dataIndex]||0) >= 0 ? '#10b981' : '#ef4444';
-              return '#fff';
-            },
+            color: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) >= 0 ? '#10b981' : '#ef4444',
             font: { size: 9, weight: 'bold' },
-            textStrokeColor: ctx => {
-              const v = Math.abs(ctx.dataset.data[ctx.dataIndex] || 0);
-              const mx = Math.max(...ctx.dataset.data.map(d => Math.abs(d||0)));
-              return mx > 0 && v/mx < 0.25 ? 'transparent' : '#00000060';
-            },
-            textStrokeWidth: 2
+            textStrokeColor: 'transparent',
+            textStrokeWidth: 0
           }
         },
+        layout: { padding: { left: isNeg ? 140 : 8, right: isNeg ? 8 : 140 } },
         scales:{ x:{ ticks:{ callback: v=>field==='delta'?'€'+fmt(v):v.toFixed(0)+'%' } } }
       }
     });
