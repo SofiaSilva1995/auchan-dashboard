@@ -287,7 +287,7 @@ table.dt tr:hover td{background:#f8fafc}
   <div class="search-box">
     <input type="text" id="prodSearch" placeholder="Pesquisar CNP, descrição, marca, gama..." oninput="renderProductsTable()">
   </div>
-  <button class="btn-csv" onclick="exportCSV()">⬇ Exportar CSV</button>
+  <button class="btn-csv" onclick="exportCSV()">Exportar CSV</button>
   <div class="chart-card" style="padding:12px">
     <div class="table-wrap">
       <table class="dt" id="tblProds">
@@ -701,7 +701,7 @@ function renderExec() {
 
   kpis.push({
     label: 'Lojas (crescimento / quebra)',
-    value: `${storesUp} ▲ · ${storesDn} ▼`,
+    value: `${storesUp} em alta / ${storesDn} em baixa`,
     sub: `de ${storesWithComp.length} lojas com comparativo`,
     badge: null,
     grow: storesUp >= storesDn ? 1 : -1
@@ -1673,7 +1673,7 @@ function renderAlerts() {
   const stoppedEl = document.getElementById('alertStoppedProds');
   if (stoppedEl) {
     if (stoppedProds.length === 0) {
-      stoppedEl.innerHTML = '<div class="ac-row"><div class="ac-name" style="color:var(--muted)">Nenhum produto parado no período seleccionado ✓</div></div>';
+      stoppedEl.innerHTML = '<div class="ac-row"><div class="ac-name" style="color:var(--muted)">Nenhum produto parado no período seleccionado.</div></div>';
     } else {
       stoppedEl.innerHTML = stoppedProds.slice(0,20).map((r,i) => `
         <div class="ac-row">
