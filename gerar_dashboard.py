@@ -16,8 +16,9 @@ PF_LOGO_B64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 import glob as _glob
-_xlsx = sorted(_glob.glob('*.xlsx'))
-EXCEL = sys.argv[1] if len(sys.argv) > 1 else (_xlsx[0] if _xlsx else None)
+_xlsx = sorted(_glob.glob('*.xlsx') + _glob.glob('*.xlsb'))
+_csv  = [f for f in sorted(_glob.glob('*.csv')) if 'produtos' not in f.lower()]
+EXCEL = sys.argv[1] if len(sys.argv) > 1 else (_xlsx[0] if _xlsx else (_csv[0] if _csv else None))
 OUTPUT = sys.argv[2] if len(sys.argv) > 2 else 'Auchan_Dashboard.html'
 
 BRAND_COLORS = {
@@ -53,11 +54,22 @@ MONTH_PT = {1:'Jan',2:'Fev',3:'Mar',4:'Abr',5:'Mai',6:'Jun',
 
 # ─── 1. LOAD & CLEAN ─────────────────────────────────────────────────────────
 if not EXCEL:
-    raise FileNotFoundError("Nenhum ficheiro .xlsx encontrado no directório actual.")
+    raise FileNotFoundError("Nenhum ficheiro .xlsx/.xlsb/.csv encontrado no directório actual.")
 print(f"A carregar {Path(EXCEL).name} ...")
-raw = pd.read_excel(EXCEL, sheet_name=0, header=0)
-raw.columns = raw.iloc[0].tolist()
-raw = raw.iloc[1:].reset_index(drop=True)
+_ext = Path(EXCEL).suffix.lower()
+if _ext == '.csv':
+    try:
+        raw = pd.read_csv(EXCEL, encoding='utf-8', low_memory=False)
+    except UnicodeDecodeError:
+        raw = pd.read_csv(EXCEL, encoding='latin-1', low_memory=False)
+elif _ext == '.xlsb':
+    raw = pd.read_excel(EXCEL, sheet_name=0, header=0, engine='pyxlsb')
+    raw.columns = raw.iloc[0].tolist()
+    raw = raw.iloc[1:].reset_index(drop=True)
+else:
+    raw = pd.read_excel(EXCEL, sheet_name=0, header=0)
+    raw.columns = raw.iloc[0].tolist()
+    raw = raw.iloc[1:].reset_index(drop=True)
 
 # Normalizar nomes de colunas (strip whitespace duplo)
 raw.columns = [str(c).strip().replace('  ', ' ') for c in raw.columns]
