@@ -1,0 +1,88 @@
+name: Gerar e Enviar Auchan Dashboard
+
+on:
+  push:
+    paths:
+      - '*.xlsx'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  gerar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install pandas openpyxl
+
+      - name: Gerar Dashboard
+        run: python gerar_dashboard.py
+
+      - name: Enviar email
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          python3 << 'EOF'
+          import smtplib, os, glob
+          from email.mime.multipart import MIMEMultipart
+          from email.mime.base import MIMEBase
+          from email.mime.text import MIMEText
+          from email import encoders
+
+          sender    = os.environ["SMTP_USER"]
+          password  = os.environ["SMTP_PASS"]
+          recipient = os.environ["EMAIL_TO"]
+
+          html_files = sorted(glob.glob("Auchan_Dashboard*.html"), reverse=True)
+          if not html_files:
+              raise FileNotFoundError("Dashboard HTML nao encontrado")
+          html_file = html_files[0]
+          size_mb   = os.path.getsize(html_file) / 1024 / 1024
+          filename  = os.path.basename(html_file)
+
+          msg = MIMEMultipart()
+          msg["From"]    = sender
+          msg["To"]      = recipient
+          msg["Subject"] = f"Auchan Dashboard — actualizado"
+
+          body = f"""Ola,
+
+          Em anexo o Auchan Sell-Out Dashboard actualizado ({size_mb:.1f} MB).
+
+          Abre directamente no browser.
+          """
+          msg.attach(MIMEText(body, "plain"))
+
+          with open(html_file, "rb") as f:
+              part = MIMEBase("application", "octet-stream")
+              part.set_payload(f.read())
+          encoders.encode_base64(part)
+          part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+          msg.attach(part)
+
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+              smtp.login(sender, password)
+              smtp.sendmail(sender, recipient, msg.as_string())
+          print(f"Email enviado para {recipient} ({size_mb:.1f} MB)")
+          EOF
+
+      - name: Commit dashboard ao repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Auchan_Dashboard*.html
+          git diff --staged --quiet || git commit -m "auto: update auchan dashboard [skip ci]"
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
