@@ -75,6 +75,12 @@ table.dt tr:hover td{background:#f8fafc}
 .pagination button.active{background:var(--pf);color:#fff;border-color:var(--pf)}
 .pagination button:hover:not(.active){background:var(--bg)}
 .pagination .page-info{font-size:12px;color:var(--muted)}
+.insights-panel{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px}
+.insight-item{display:flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;background:#fff;border-radius:8px;border:1px solid #bae6fd;flex:1;min-width:180px}
+.insight-text{color:#1e293b;font-weight:500}
+.insight-text strong{color:#1e3a5f}
+.btn-csv{padding:5px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px;display:inline-block}
+.btn-csv:hover{background:#059669}
 </style>
 </head>
 <body>
@@ -142,6 +148,7 @@ table.dt tr:hover td{background:#f8fafc}
 <!-- TAB: EXEC SUMMARY -->
 <div id="tab-exec" class="tab-panel active">
   <div class="kpi-grid" id="kpiGrid"></div>
+  <div id="execInsights"></div>
   <div class="row-charts">
     <div class="chart-card" style="grid-column:1/-1">
       <h5>Evolução Mensal de Vendas (€) — 2025 vs 2026</h5>
@@ -280,6 +287,7 @@ table.dt tr:hover td{background:#f8fafc}
   <div class="search-box">
     <input type="text" id="prodSearch" placeholder="Pesquisar CNP, descrição, marca, gama..." oninput="renderProductsTable()">
   </div>
+  <button class="btn-csv" onclick="exportCSV()">⬇ Exportar CSV</button>
   <div class="chart-card" style="padding:12px">
     <div class="table-wrap">
       <table class="dt" id="tblProds">
@@ -294,6 +302,7 @@ table.dt tr:hover td{background:#f8fafc}
           <th onclick="sortProdTable(7)">Cresc. %</th>
           <th onclick="sortProdTable(8)">Unid. CY</th>
           <th onclick="sortProdTable(9)">Unid. LY</th>
+          <th onclick="sortProdTable(10)">PVP CY (€/un)</th>
         </tr></thead>
         <tbody id="tblProdsBody"></tbody>
       </table>
@@ -379,6 +388,13 @@ table.dt tr:hover td{background:#f8fafc}
         <div class="ac-header">Top 10 Lojas com Maior Quebra (€)</div>
         <div id="alertStoreDn"></div>
       </div>
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <div class="section-title">Produtos Parados</div>
+    <div class="alert-card">
+      <div class="ac-header">Produtos com Vendas em LY mas sem Vendas em CY (Ruptura / Descontinuação)</div>
+      <div id="alertStoppedProds"></div>
     </div>
   </div>
 </div>
@@ -673,6 +689,24 @@ function renderExec() {
       grow: growV
     },
   ];
+  // Compute store growth for 5th KPI and insights
+  const storeGrowthList = DATA.stores.map(s => {
+    const sc = sumSM(s, pm.cy).v;
+    const sl = sumSM(s, pm.ly).v;
+    return { store: s, cy: sc, ly: sl, grow: sl > 0 && sc > 0 ? (sc - sl) / sl * 100 : null };
+  });
+  const storesWithData = storeGrowthList.filter(s => s.cy > 0 || s.ly > 0);
+  const storesUp = storesWithData.filter(s => s.grow !== null && s.grow >= 0).length;
+  const storesDn = storesWithData.filter(s => s.grow !== null && s.grow < 0).length;
+
+  kpis.push({
+    label: 'Lojas com Crescimento',
+    value: `${storesUp} / ${storesWithData.length}`,
+    sub: storesDn > 0 ? `${storesDn} loja${storesDn>1?'s':''} em quebra` : 'Todas em crescimento',
+    badge: null,
+    grow: storesUp >= storesDn ? 1 : -1
+  });
+
   document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
     <div class="kpi">
       <div class="label">${k.label}</div>
@@ -682,6 +716,33 @@ function renderExec() {
         ${k.badge !== null ? `<span class="${k.grow >= 0 ? 'badge-up' : 'badge-dn'}"> ${k.badge}</span>` : ''}
       </div>
     </div>`).join('');
+
+  // Auto insights
+  const brandRows = DATA.brands.map(b => {
+    const bc = F.cat ? sumBCM(b, F.cat, pm.cy).v : sumBM(b, pm.cy).v;
+    const bl = F.cat ? sumBCM(b, F.cat, pm.ly).v : sumBM(b, pm.ly).v;
+    return { brand: b, cy: bc, ly: bl, grow: bl > 0 && bc > 0 ? (bc - bl) / bl * 100 : null };
+  }).filter(r => r.cy > 0);
+  const topBrand = brandRows.sort((a,b) => b.cy - a.cy)[0];
+  const fastestBrand = [...brandRows].filter(r => r.grow !== null).sort((a,b) => b.grow - a.grow)[0];
+  const topStore = storeGrowthList.filter(s => s.cy > 0).sort((a,b) => b.cy - a.cy)[0];
+  const worstStore = storeGrowthList.filter(s => s.grow !== null).sort((a,b) => a.grow - b.grow)[0];
+  const totalCY = DATA.products.reduce((acc, p) => acc + pm.cy.reduce((s,ym) => s + (p.monthly?.[ym]?.v||0), 0), 0);
+  const innovCY = DATA.products
+    .filter(p => pm.ly.every(ym => !(p.monthly?.[ym]?.v > 0)) && pm.cy.some(ym => p.monthly?.[ym]?.v > 0))
+    .reduce((acc, p) => acc + pm.cy.reduce((s,ym) => s + (p.monthly?.[ym]?.v||0), 0), 0);
+  const innovPct = totalCY > 0 ? (innovCY / totalCY * 100) : 0;
+
+  const insights = [];
+  if (topBrand) insights.push(`<span class="insight-item">🏆 Top marca: <strong class="insight-text">&nbsp;${topBrand.brand}</strong>&nbsp;(${fmtEur(topBrand.cy)})</span>`);
+  if (fastestBrand) insights.push(`<span class="insight-item">🚀 Mais crescimento: <strong class="insight-text">&nbsp;${fastestBrand.brand}</strong>&nbsp;(${fmtPct(fastestBrand.grow)})</span>`);
+  if (topStore) insights.push(`<span class="insight-item">📍 Top loja: <strong class="insight-text">&nbsp;${topStore.store}</strong>&nbsp;(${fmtEur(topStore.cy)})</span>`);
+  if (worstStore && worstStore.grow < 0) insights.push(`<span class="insight-item" style="border-color:#fecaca">⚠️ Pior loja: <strong class="insight-text">&nbsp;${worstStore.store}</strong>&nbsp;(${fmtPct(worstStore.grow)})</span>`);
+  if (innovPct > 0) insights.push(`<span class="insight-item">✨ Inovação: <strong class="insight-text">&nbsp;${innovPct.toFixed(1)}%</strong>&nbsp;das vendas CY</span>`);
+  if (storesDn > 0) insights.push(`<span class="insight-item" style="border-color:#fecaca">🔴 Lojas em quebra: <strong class="insight-text">&nbsp;${storesDn}</strong></span>`);
+
+  document.getElementById('execInsights').innerHTML = insights.length
+    ? `<div class="insights-panel">${insights.join('')}</div>` : '';
 
   // Monthly trend chart
   destroyChart('chartMonthly');
@@ -1079,8 +1140,10 @@ function renderBrands() {
     data: {
       labels: bRows.map(r => r.brand),
       datasets: [
-        { label: 'CY', data: bRows.map(r => r.cy), backgroundColor: bRows.map(r => DATA.brand_colors[r.brand] || '#64748b'), borderWidth: 0 },
-        { label: 'LY', data: bRows.map(r => r.ly), backgroundColor: bRows.map(r => (DATA.brand_colors[r.brand]||'#64748b')+'60'), borderWidth: 0 },
+        { label: 'CY', data: bRows.map(r => r.cy), backgroundColor: bRows.map(r => DATA.brand_colors[r.brand] || '#64748b'), borderWidth: 0,
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: v => v > 2000 ? '€'+Math.round(v/1000)+'k' : '' } },
+        { label: 'LY', data: bRows.map(r => r.ly), backgroundColor: bRows.map(r => (DATA.brand_colors[r.brand]||'#64748b')+'60'), borderWidth: 0,
+          datalabels: { display: false } },
       ]
     },
     options: {
@@ -1088,7 +1151,6 @@ function renderBrands() {
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: c => ' €' + fmt(c.parsed.y) } },
-        datalabels: { display: false }
       },
       layout: { padding: { top: 20 } },
       scales: { y: { grace: '12%', ticks: { callback: v => '€'+fmt(v) } } }
@@ -1111,7 +1173,7 @@ function renderBrands() {
     options: {
       responsive: true,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmtPct(c.parsed.y) } } },
-      scales: { y: { ticks: { callback: v => v.toFixed(0)+'%' } } }
+      scales: { y: { ticks: { callback: v => v.toFixed(0)+'%' }, grid: { color: ctx => ctx.tick.value === 0 ? '#475569' : '#e2e8f020' } } }
     }
   });
 
@@ -1198,8 +1260,10 @@ function renderCats() {
     data: {
       labels: cRows.map(r=>r.cat),
       datasets: [
-        { label:'CY', data:cRows.map(r=>r.cy), backgroundColor: cRows.map(r=>DATA.cat_colors[r.cat]||'#94a3b8'), borderWidth:0 },
-        { label:'LY', data:cRows.map(r=>r.ly), backgroundColor: cRows.map(r=>(DATA.cat_colors[r.cat]||'#94a3b8')+'60'), borderWidth:0 },
+        { label:'CY', data:cRows.map(r=>r.cy), backgroundColor: cRows.map(r=>DATA.cat_colors[r.cat]||'#94a3b8'), borderWidth:0,
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: v => v > 2000 ? '€'+Math.round(v/1000)+'k' : '' } },
+        { label:'LY', data:cRows.map(r=>r.ly), backgroundColor: cRows.map(r=>(DATA.cat_colors[r.cat]||'#94a3b8')+'60'), borderWidth:0,
+          datalabels: { display: false } },
       ]
     },
     options: {
@@ -1207,7 +1271,6 @@ function renderCats() {
       plugins:{
         legend:{ display:false },
         tooltip:{ callbacks:{ label: c=>' €'+fmt(c.parsed.x) } },
-        datalabels: { display: false }
       },
       scales:{ x:{ grace:'15%', ticks:{ callback: v=>'€'+fmt(v) } } }
     }
@@ -1263,7 +1326,7 @@ function renderCats() {
     options: {
       responsive:true, maintainAspectRatio:true,
       plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>' '+fmtPct(c.parsed.y) } } },
-      scales:{ y:{ ticks:{ callback: v=>v.toFixed(0)+'%' } } }
+      scales:{ y:{ ticks:{ callback: v=>v.toFixed(0)+'%' }, grid: { color: ctx => ctx.tick.value === 0 ? '#475569' : '#e2e8f020' } } }
     }
   });
 
@@ -1324,13 +1387,14 @@ function renderProductsTable() {
     const cy = sumProd(p, pm.cy);
     const ly = sumProd(p, pm.ly);
     const grow = ly.v > 0 ? (cy.v-ly.v)/ly.v*100 : null;
-    return { ...p, cyV:cy.v, lyV:ly.v, cyU:cy.u, lyU:ly.u, grow };
+    const pvp = cy.u > 0 ? cy.v / cy.u : null;
+    return { ...p, cyV:cy.v, lyV:ly.v, cyU:cy.u, lyU:ly.u, grow, pvp };
   }).filter(r => r.cyV > 0 || r.lyV > 0);
 
   // sort
   prodRows.sort((a,b) => {
     const vals = [r => r.cnp, r=>r.desc, r=>r.marca, r=>r.cat, r=>r.gama,
-                  r=>r.cyV, r=>r.lyV, r=>r.grow||0, r=>r.cyU, r=>r.lyU];
+                  r=>r.cyV, r=>r.lyV, r=>r.grow||0, r=>r.cyU, r=>r.lyU, r=>r.pvp||0];
     const fn = vals[prodSort.col] || (r=>r.cyV);
     const av=fn(a), bv=fn(b);
     if (typeof av==='string') return av.localeCompare(bv) * prodSort.dir;
@@ -1365,6 +1429,7 @@ function renderProductsTable() {
       <td class="${growthClass(r.grow)}">${fmtPct(r.grow)}</td>
       <td>${fmt(r.cyU)}</td>
       <td>${fmt(r.lyU)}</td>
+      <td>${r.pvp !== null ? fmtEur(r.pvp) : '—'}</td>
     </tr>`).join('');
 
   // Pagination controls
@@ -1384,6 +1449,28 @@ function sortProdTable(col) {
   if (prodSort.col===col) prodSort.dir *= -1; else { prodSort.col=col; prodSort.dir=-1; }
   prodPage=1;
   renderProductsTable();
+}
+
+function exportCSV() {
+  const rows = prodRows;
+  if (!rows.length) { alert('Sem dados para exportar.'); return; }
+  const headers = ['CNP','Descrição','Marca','Categoria','Gama','Vendas CY (€)','Vendas LY (€)','Cresc. %','Unid. CY','Unid. LY','PVP CY (€/un)'];
+  const escCSV = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const lines = [headers.map(escCSV).join(';')];
+  rows.forEach(r => {
+    lines.push([
+      r.cnp, r.desc, r.marca, r.cat, r.gama,
+      r.cyV.toFixed(2), r.lyV.toFixed(2),
+      r.grow !== null ? r.grow.toFixed(1) : '',
+      r.cyU, r.lyU,
+      r.pvp !== null ? r.pvp.toFixed(2) : ''
+    ].map(escCSV).join(';'));
+  });
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'auchan_produtos.csv';
+  a.click();
 }
 
 // ─── TAB: GROWTH ─────────────────────────────────────────────────────────────
@@ -1535,8 +1622,9 @@ function renderInnov() {
 function renderAlerts() {
   const pm = getPeriodMonths();
   if (pm.ly.length === 0) {
-    ['alertProdUp','alertProdDn','alertStoreUp','alertStoreDn'].forEach(id => {
-      document.getElementById(id).innerHTML = '<div class="ac-row"><div class="ac-name" style="color:var(--muted)">Seleccione um período com comparativo (ex: YTD 2026)</div></div>';
+    ['alertProdUp','alertProdDn','alertStoreUp','alertStoreDn','alertStoppedProds'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<div class="ac-row"><div class="ac-name" style="color:var(--muted)">Seleccione um período com comparativo (ex: YTD 2026)</div></div>';
     });
     return;
   }
@@ -1576,6 +1664,26 @@ function renderAlerts() {
   const dnStores = [...storeRows].filter(r=>r.delta<0).sort((a,b)=>a.delta-b.delta);
   document.getElementById('alertStoreUp').innerHTML = alertHtml(upStores.slice(0,10),'grow');
   document.getElementById('alertStoreDn').innerHTML = alertHtml(dnStores.slice(0,10),'drop');
+
+  // Produtos Parados: tinham vendas em LY mas CY=0
+  const stoppedProds = getFilteredProducts()
+    .map(p => { const cy=sumProd(p,pm.cy), ly=sumProd(p,pm.ly); return { name:p.desc, marca:p.marca, cat:p.cat, ly:ly.v, cy:cy.v }; })
+    .filter(r => r.ly > 0 && r.cy === 0)
+    .sort((a,b) => b.ly - a.ly);
+  const stoppedEl = document.getElementById('alertStoppedProds');
+  if (stoppedEl) {
+    if (stoppedProds.length === 0) {
+      stoppedEl.innerHTML = '<div class="ac-row"><div class="ac-name" style="color:var(--muted)">Nenhum produto parado no período seleccionado ✓</div></div>';
+    } else {
+      stoppedEl.innerHTML = stoppedProds.slice(0,20).map((r,i) => `
+        <div class="ac-row">
+          <div class="ac-rank drop">${i+1}</div>
+          <div class="ac-name" title="${r.name}">${r.name.length>50?r.name.slice(0,50)+'…':r.name} <span style="font-size:10px;color:var(--muted)">${r.marca} · ${r.cat}</span></div>
+          <div class="ac-val badge-drop">LY: ${fmtEur(r.ly)}</div>
+        </div>`).join('')
+        + (stoppedProds.length > 20 ? `<div style="font-size:11px;color:var(--muted);padding:6px 4px">+${stoppedProds.length-20} produtos adicionais</div>` : '');
+    }
+  }
 }
 
 // ─── SORT TABLE ───────────────────────────────────────────────────────────────
