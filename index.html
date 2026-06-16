@@ -1401,8 +1401,8 @@ function renderGrowth() {
           } } },
           datalabels: {
             display: true,
-            anchor: 'end',
-            align: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'start' : 'end',
+            anchor: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'start' : 'end',
+            align: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'left' : 'right',
             formatter: (v, ctx) => {
               if (v === null) return '';
               if (field === 'delta') {
