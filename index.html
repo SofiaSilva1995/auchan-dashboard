@@ -76,7 +76,7 @@ table.dt tr:hover td{background:#f8fafc}
 .pagination button:hover:not(.active){background:var(--bg)}
 .pagination .page-info{font-size:12px;color:var(--muted)}
 .insights-panel{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:8px}
-.insight-item{display:flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;background:#fff;border-radius:8px;border:1px solid #bae6fd;flex:1;min-width:180px}
+.insight-item{display:flex;align-items:center;gap:6px;font-size:12px;padding:5px 10px;background:#fff;border-radius:8px;border:1px solid #bae6fd;flex:0 0 auto;white-space:nowrap}
 .insight-text{color:#1e293b;font-weight:500}
 .insight-text strong{color:#1e3a5f}
 .btn-csv{padding:5px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:10px;display:inline-block}
@@ -700,11 +700,11 @@ function renderExec() {
   const storesDn = storesWithComp.filter(s => s.grow < 0).length;
 
   kpis.push({
-    label: 'Lojas (crescimento / quebra)',
-    value: `${storesUp} em alta / ${storesDn} em baixa`,
-    sub: `de ${storesWithComp.length} lojas com comparativo`,
+    label: 'Lojas em Quebra vs LY',
+    value: `${storesDn} de ${storesWithComp.length}`,
+    sub: `lojas com sell-out abaixo do ano anterior (${storesUp} em crescimento)`,
     badge: null,
-    grow: storesUp >= storesDn ? 1 : -1
+    grow: -1
   });
 
   document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
@@ -739,8 +739,6 @@ function renderExec() {
   if (topStore) insights.push(`<span class="insight-item">Top loja: <strong class="insight-text">&nbsp;${topStore.store}</strong>&nbsp;(${fmtEur(topStore.cy)})</span>`);
   if (worstStore && worstStore.grow < 0) insights.push(`<span class="insight-item" style="border-color:#fecaca">Pior loja: <strong class="insight-text">&nbsp;${worstStore.store}</strong>&nbsp;(${fmtPct(worstStore.grow)})</span>`);
   if (innovPct > 0) insights.push(`<span class="insight-item">Inovação: <strong class="insight-text">&nbsp;${innovPct.toFixed(1)}%</strong>&nbsp;das vendas CY</span>`);
-  if (storesDn > 0) insights.push(`<span class="insight-item" style="border-color:#fecaca">Lojas em quebra: <strong class="insight-text">&nbsp;${storesDn}</strong></span>`);
-
   document.getElementById('execInsights').innerHTML = insights.length
     ? `<div class="insights-panel">${insights.join('')}</div>` : '';
 
@@ -1141,9 +1139,9 @@ function renderBrands() {
       labels: bRows.map(r => r.brand),
       datasets: [
         { label: 'CY', data: bRows.map(r => r.cy), backgroundColor: bRows.map(r => DATA.brand_colors[r.brand] || '#64748b'), borderWidth: 0,
-          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { const max = Math.max(...ctx.dataset.data.filter(x=>x!=null)); return (v > 2000 && v > max * 0.20) ? '€'+Math.round(v/1000)+'k' : ''; } } },
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex]; if (!bar) return ''; if (Math.abs(bar.y - bar.base) < 30) return ''; return '€'+Math.round(v/1000)+'k'; } } },
         { label: 'LY', data: bRows.map(r => r.ly), backgroundColor: bRows.map(r => (DATA.brand_colors[r.brand]||'#64748b')+'60'), borderWidth: 0,
-          datalabels: { display: false } },
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#334155', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex]; if (!bar) return ''; if (Math.abs(bar.y - bar.base) < 30) return ''; return '€'+Math.round(v/1000)+'k'; } } },
       ]
     },
     options: {
@@ -1261,9 +1259,9 @@ function renderCats() {
       labels: cRows.map(r=>r.cat),
       datasets: [
         { label:'CY', data:cRows.map(r=>r.cy), backgroundColor: cRows.map(r=>DATA.cat_colors[r.cat]||'#94a3b8'), borderWidth:0,
-          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { const max = Math.max(...ctx.dataset.data.filter(x=>x!=null)); return (v > 2000 && v > max * 0.20) ? '€'+Math.round(v/1000)+'k' : ''; } } },
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex]; if (!bar) return ''; if (Math.abs(bar.x - bar.base) < 60) return ''; return '€'+Math.round(v/1000)+'k'; } } },
         { label:'LY', data:cRows.map(r=>r.ly), backgroundColor: cRows.map(r=>(DATA.cat_colors[r.cat]||'#94a3b8')+'60'), borderWidth:0,
-          datalabels: { display: false } },
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#334155', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex]; if (!bar) return ''; if (Math.abs(bar.x - bar.base) < 60) return ''; return '€'+Math.round(v/1000)+'k'; } } },
       ]
     },
     options: {
