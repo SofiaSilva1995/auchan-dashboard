@@ -35,7 +35,7 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: |
-          python3 << 'EOF'
+          python3 << 'PYEOF'
           import smtplib, os, glob
           from email.mime.multipart import MIMEMultipart
           from email.mime.base import MIMEBase
@@ -56,14 +56,13 @@ jobs:
           msg = MIMEMultipart()
           msg["From"]    = sender
           msg["To"]      = recipient
-          msg["Subject"] = f"Auchan Dashboard — actualizado"
+          msg["Subject"] = "Auchan Dashboard actualizado"
 
-          body = f"""Ola,
-
-          Em anexo o Auchan Sell-Out Dashboard actualizado ({size_mb:.1f} MB).
-
-          Abre directamente no browser.
-          """
+          body = (
+              "Ola,\n\n"
+              f"Em anexo o Auchan Sell-Out Dashboard actualizado ({size_mb:.1f} MB).\n\n"
+              "Abre directamente no browser."
+          )
           msg.attach(MIMEText(body, "plain"))
 
           with open(html_file, "rb") as f:
@@ -77,12 +76,13 @@ jobs:
               smtp.login(sender, password)
               smtp.sendmail(sender, recipient, msg.as_string())
           print(f"Email enviado para {recipient} ({size_mb:.1f} MB)")
-          EOF
+          PYEOF
 
       - name: Commit dashboard ao repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Auchan_Dashboard*.html
+          cp Auchan_Dashboard.html index.html
+          git add Auchan_Dashboard*.html index.html
           git diff --staged --quiet || git commit -m "auto: update auchan dashboard [skip ci]"
           git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
