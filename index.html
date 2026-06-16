@@ -127,7 +127,7 @@ table.dt tr:hover td{background:#f8fafc}
 
 <!-- TABS -->
 <div class="tab-nav">
-  <button class="tab-btn active" onclick="switchTab('exec',this)">Resumo Executivo</button>
+  <button class="tab-btn active" onclick="switchTab('exec',this)">Resumo</button>
   <button class="tab-btn" onclick="switchTab('stores',this)">Lojas</button>
   <button class="tab-btn" onclick="switchTab('brands',this)">Marcas</button>
   <button class="tab-btn" onclick="switchTab('cats',this)">Categorias</button>
@@ -199,6 +199,7 @@ table.dt tr:hover td{background:#f8fafc}
         <button onclick="setBrandEvolView('2025')" class="btn-evol" id="bevol-2025">2025</button>
         <button onclick="setBrandEvolView('2026')" class="btn-evol" id="bevol-2026">2026</button>
         <button onclick="setBrandEvolView('all')" class="btn-evol btn-evol-active" id="bevol-all">Todos</button>
+        <button onclick="resetBrandEvol()" class="btn-evol" id="bevol-reset">Reset</button>
       </div>
     </div>
     <canvas id="chartBrandEvol" height="90"></canvas>
@@ -245,6 +246,7 @@ table.dt tr:hover td{background:#f8fafc}
           <button onclick="setCatEvolView('2025')" class="btn-evol" id="cevol-2025">2025</button>
           <button onclick="setCatEvolView('2026')" class="btn-evol" id="cevol-2026">2026</button>
           <button onclick="setCatEvolView('all')" class="btn-evol btn-evol-active" id="cevol-all">Todos</button>
+          <button onclick="resetCatEvol()" class="btn-evol" id="cevol-reset">Reset</button>
         </div>
       </div>
       <canvas id="chartCatEvol" height="280"></canvas>
@@ -735,7 +737,11 @@ function renderExec() {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { position: 'right', labels: { font: { size: 11 } } },
-        tooltip: { callbacks: { label: c => ' €' + fmt(c.parsed) } },
+        tooltip: { callbacks: { label: c => {
+          const sum = c.dataset.data.reduce((a,b)=>a+(b||0),0);
+          const pct = sum>0 ? (c.parsed/sum*100).toFixed(1) : '0.0';
+          return ' '+pct+'% — €'+fmt(c.parsed);
+        } } },
         datalabels: {
           display: true,
           formatter: (value, ctx) => {
@@ -770,7 +776,11 @@ function renderExec() {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { position: 'right', labels: { font: { size: 11 } } },
-        tooltip: { callbacks: { label: c => ' €' + fmt(c.parsed) } },
+        tooltip: { callbacks: { label: c => {
+          const sum = c.dataset.data.reduce((a,b)=>a+(b||0),0);
+          const pct = sum>0 ? (c.parsed/sum*100).toFixed(1) : '0.0';
+          return ' '+pct+'% — €'+fmt(c.parsed);
+        } } },
         datalabels: {
           display: true,
           formatter: (value, ctx) => {
@@ -945,9 +955,17 @@ function setBrandEvolView(v) {
   _brandEvolView = v;
   renderBrands();
 }
+function resetBrandEvol() {
+  const c = CH['chartBrandEvol'];
+  if (c) { c.data.datasets.forEach(ds => { ds.hidden = false; }); c.update(); }
+}
 function setCatEvolView(v) {
   _catEvolView = v;
   renderCats();
+}
+function resetCatEvol() {
+  const c = CH['chartCatEvol'];
+  if (c) { c.data.datasets.forEach(ds => { ds.hidden = false; }); c.update(); }
 }
 
 function renderBrands() {
@@ -1048,14 +1066,17 @@ function renderBrands() {
         tooltip: { callbacks: { label: c => ' €' + fmt(c.parsed.y) } },
         datalabels: {
           display: ctx => ctx.datasetIndex === 0,
-          anchor: 'center', align: 'center',
+          anchor: 'end', align: 'end',
           formatter: (v, ctx) => {
             const g = bRows[ctx.dataIndex]?.grow;
             if (g === null || g === undefined) return '';
             return (g >= 0 ? '+' : '') + g.toFixed(1) + '% vs LY';
           },
           font: { size: 9, weight: 'bold' },
-          color: '#fff'
+          color: ctx => {
+            const g = bRows[ctx.dataIndex]?.grow;
+            return (g !== null && g >= 0) ? '#10b981' : '#ef4444';
+          }
         }
       },
       scales: { y: { ticks: { callback: v => '€'+fmt(v) } } }
@@ -1153,7 +1174,7 @@ function renderCats() {
         datalabels: {
           labels: {
             val: {
-              display: true,
+              display: false,
               anchor: 'center', align: 'center',
               formatter: (v, ctx) => {
                 if (!v || v < 100) return '';
@@ -1367,7 +1388,7 @@ function renderGrowth() {
   }).filter(r => r.lyV > 0 || r.cyV > 0);
 
   const byDelta = [...rows].sort((a,b)=>b.delta-a.delta);
-  const byPct   = [...rows].filter(r=>r.lyV>0).sort((a,b)=>b.pct-a.pct);
+  const byPct   = [...rows].filter(r=>r.lyV>0 && r.cyV>0).sort((a,b)=>b.pct-a.pct);
 
   const shortDesc = d => d.length>30?d.slice(0,30)+'…':d;
 
@@ -1397,14 +1418,15 @@ function renderGrowth() {
           } } },
           datalabels: {
             display: true,
-            anchor: ctx => (ctx.dataset.data[ctx.dataIndex] || 0) < 0 ? 'start' : 'end',
-            align: 'right',
+            anchor: 'end',
+            align: 'end',
+            clamp: false,
             formatter: (v, ctx) => {
               if (v === null) return '';
               if (field === 'delta') {
                 const eur = Math.abs(v)>=10000?'€'+(v/1000).toFixed(0)+'k':'€'+fmt(v,0);
                 const d = data[ctx.dataIndex];
-                const pct = d && d.pct !== null && d.pct !== undefined ? ' ('+(d.pct>=0?'+':'')+d.pct.toFixed(1)+'% vs LY)' : '';
+                const pct = d && d.pct !== null && d.pct !== undefined ? ' ('+(d.pct>=0?'+':'')+d.pct.toFixed(1)+'%)' : '';
                 return eur+pct;
               }
               return fmtPct(v);
@@ -1413,7 +1435,7 @@ function renderGrowth() {
             font: { size: 9, weight: 'bold' }
           }
         },
-        layout: { padding: { left: 8, right: 160 } },
+        layout: { padding: { left: 100, right: 100 } },
         scales:{ x:{ ticks:{ callback: v=>field==='delta'?'€'+fmt(v):v.toFixed(0)+'%' } } }
       }
     });
