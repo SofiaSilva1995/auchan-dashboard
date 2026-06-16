@@ -1139,9 +1139,9 @@ function renderBrands() {
       labels: bRows.map(r => r.brand),
       datasets: [
         { label: 'CY', data: bRows.map(r => r.cy), backgroundColor: bRows.map(r => DATA.brand_colors[r.brand] || '#64748b'), borderWidth: 0,
-          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex]; if (!bar) return ''; if (Math.abs(bar.y - bar.base) < 30) return ''; return '€'+Math.round(v/1000)+'k'; } } },
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const mx = Math.max(...ctx.dataset.data.filter(x=>x>0)); return v >= mx*0.15 ? '€'+Math.round(v/1000)+'k' : ''; } } },
         { label: 'LY', data: bRows.map(r => r.ly), backgroundColor: bRows.map(r => (DATA.brand_colors[r.brand]||'#64748b')+'60'), borderWidth: 0,
-          datalabels: { display: true, anchor: 'center', align: 'center', color: '#334155', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex]; if (!bar) return ''; if (Math.abs(bar.y - bar.base) < 30) return ''; return '€'+Math.round(v/1000)+'k'; } } },
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#334155', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const mx = Math.max(...ctx.dataset.data.filter(x=>x>0)); return v >= mx*0.15 ? '€'+Math.round(v/1000)+'k' : ''; } } },
       ]
     },
     options: {
@@ -1259,9 +1259,9 @@ function renderCats() {
       labels: cRows.map(r=>r.cat),
       datasets: [
         { label:'CY', data:cRows.map(r=>r.cy), backgroundColor: cRows.map(r=>DATA.cat_colors[r.cat]||'#94a3b8'), borderWidth:0,
-          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex]; if (!bar) return ''; if (Math.abs(bar.x - bar.base) < 60) return ''; return '€'+Math.round(v/1000)+'k'; } } },
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#fff', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const mx = Math.max(...ctx.dataset.data.filter(x=>x>0)); return v >= mx*0.15 ? '€'+Math.round(v/1000)+'k' : ''; } } },
         { label:'LY', data:cRows.map(r=>r.ly), backgroundColor: cRows.map(r=>(DATA.cat_colors[r.cat]||'#94a3b8')+'60'), borderWidth:0,
-          datalabels: { display: true, anchor: 'center', align: 'center', color: '#334155', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const bar = ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.dataIndex]; if (!bar) return ''; if (Math.abs(bar.x - bar.base) < 60) return ''; return '€'+Math.round(v/1000)+'k'; } } },
+          datalabels: { display: true, anchor: 'center', align: 'center', color: '#334155', font: { weight: 'bold', size: 9 }, formatter: (v, ctx) => { if (!v || v <= 0) return ''; const mx = Math.max(...ctx.dataset.data.filter(x=>x>0)); return v >= mx*0.15 ? '€'+Math.round(v/1000)+'k' : ''; } } },
       ]
     },
     options: {
