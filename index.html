@@ -695,14 +695,14 @@ function renderExec() {
     const sl = sumSM(s, pm.ly).v;
     return { store: s, cy: sc, ly: sl, grow: sl > 0 && sc > 0 ? (sc - sl) / sl * 100 : null };
   });
-  const storesWithData = storeGrowthList.filter(s => s.cy > 0 || s.ly > 0);
-  const storesUp = storesWithData.filter(s => s.grow !== null && s.grow >= 0).length;
-  const storesDn = storesWithData.filter(s => s.grow !== null && s.grow < 0).length;
+  const storesWithComp = storeGrowthList.filter(s => s.cy > 0 && s.ly > 0);
+  const storesUp = storesWithComp.filter(s => s.grow >= 0).length;
+  const storesDn = storesWithComp.filter(s => s.grow < 0).length;
 
   kpis.push({
-    label: 'Lojas com Crescimento',
-    value: `${storesUp} / ${storesWithData.length}`,
-    sub: storesDn > 0 ? `${storesDn} loja${storesDn>1?'s':''} em quebra` : 'Todas em crescimento',
+    label: 'Lojas (crescimento / quebra)',
+    value: `${storesUp} ▲ · ${storesDn} ▼`,
+    sub: `de ${storesWithComp.length} lojas com comparativo`,
     badge: null,
     grow: storesUp >= storesDn ? 1 : -1
   });
