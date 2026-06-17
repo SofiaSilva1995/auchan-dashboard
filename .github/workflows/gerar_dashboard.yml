@@ -5,6 +5,7 @@ on:
     paths:
       - '*.xlsx'
       - '*.xlsb'
+      - '*.xls'
       - '*.csv'
   workflow_dispatch:
 
