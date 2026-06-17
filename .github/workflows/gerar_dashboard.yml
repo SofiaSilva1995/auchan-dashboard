@@ -26,7 +26,7 @@ jobs:
         run: |
           DATA=$(ls *.xlsx *.xlsb *.csv 2>/dev/null | head -1)
           if [ -z "$DATA" ]; then
-            echo "Sem ficheiro de dados — vai enviar index.html existente."
+            echo "Sem ficheiro de dados — vai usar index.html existente."
             echo "found=false" >> $GITHUB_OUTPUT
           else
             echo "Ficheiro encontrado: $DATA"
@@ -47,9 +47,28 @@ jobs:
         if: steps.check_data.outputs.found == 'true'
         run: python gerar_dashboard.py
 
-      - name: Preparar HTML para email
-        if: steps.check_data.outputs.found == 'false'
-        run: cp index.html Dashboard_Auchan.html
+      - name: Preparar nome com data
+        id: nome_html
+        run: |
+          DATE=$(date +%d_%m_%Y)
+          if ls Dashboard_Auchan_*.html 2>/dev/null | head -1 | grep -q .; then
+            HTML=$(ls Dashboard_Auchan_*.html | head -1)
+          else
+            HTML="Dashboard_Auchan_${DATE}.html"
+            cp index.html "$HTML"
+          fi
+          echo "html=$HTML" >> $GITHUB_OUTPUT
+          echo "HTML a usar: $HTML"
+
+      - name: Commit dashboard ao repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          HTML="${{ steps.nome_html.outputs.html }}"
+          cp "$HTML" index.html
+          git add "$HTML" index.html
+          git diff --staged --quiet || git commit -m "auto: update dashboard [skip ci]"
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
 
       - name: Enviar email
         env:
@@ -99,13 +118,3 @@ jobs:
               smtp.sendmail(sender, recipient, msg.as_string())
           print(f"Email enviado para {recipient} ({size_mb:.1f} MB)")
           PYEOF
-
-      - name: Commit dashboard ao repo
-        if: steps.check_data.outputs.found == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          cp Dashboard_Auchan*.html index.html
-          git add Dashboard_Auchan*.html index.html
-          git diff --staged --quiet || git commit -m "auto: update dashboard [skip ci]"
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
