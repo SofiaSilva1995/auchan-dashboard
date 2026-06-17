@@ -75,8 +75,18 @@ else:
 raw.columns = [str(c).strip().replace('  ', ' ') for c in raw.columns]
 
 df = raw.copy()
-df['TPVP']    = pd.to_numeric(df.get('TPVP',    df.get('TPVP', 0)), errors='coerce').fillna(0)
-df['TQT VND'] = pd.to_numeric(df.get('TQT VND', df.get('TQT VND', 0)), errors='coerce').fillna(0)
+
+# Validar colunas obrigatorias antes de processar
+_required = ['TPVP', 'TQT VND', 'Mês', 'Ano']
+_missing  = [c for c in _required if c not in df.columns]
+if _missing:
+    print(f"ERRO: '{Path(EXCEL).name}' nao tem colunas obrigatorias: {_missing}")
+    print(f"  Colunas encontradas: {list(df.columns[:15])}")
+    print("  Faz upload do ficheiro Sell-Out Auchan (Excel/CSV com TPVP, TQT VND, Mes, Ano...)")
+    sys.exit(1)
+
+df['TPVP']    = pd.to_numeric(df['TPVP'],    errors='coerce').fillna(0)
+df['TQT VND'] = pd.to_numeric(df['TQT VND'], errors='coerce').fillna(0)
 df['Mês']     = pd.to_numeric(df['Mês'], errors='coerce')
 df['Ano']     = pd.to_numeric(df['Ano'], errors='coerce')
 
