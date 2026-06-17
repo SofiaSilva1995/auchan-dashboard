@@ -23,9 +23,9 @@ jobs:
       - name: Verificar ficheiro de dados
         id: check_data
         run: |
-          DATA=$(ls *.xlsx *.xlsb *.csv 2>/dev/null | grep -iv produtos | head -1)
+          DATA=$(ls *.xlsx *.xlsb *.csv 2>/dev/null | head -1)
           if [ -z "$DATA" ]; then
-            echo "Sem ficheiro de dados novo — vai enviar index.html existente."
+            echo "Sem ficheiro de dados — vai enviar index.html existente."
             echo "found=false" >> $GITHUB_OUTPUT
           else
             echo "Ficheiro encontrado: $DATA"
@@ -48,7 +48,7 @@ jobs:
 
       - name: Preparar HTML para email
         if: steps.check_data.outputs.found == 'false'
-        run: cp index.html Auchan_Dashboard.html
+        run: cp index.html Dashboard_Auchan.html
 
       - name: Enviar email
         env:
@@ -67,7 +67,7 @@ jobs:
           password  = os.environ["SMTP_PASS"]
           recipient = os.environ["EMAIL_TO"]
 
-          html_files = sorted(glob.glob("Auchan_Dashboard*.html"), reverse=True)
+          html_files = sorted(glob.glob("Dashboard_Auchan*.html"), reverse=True)
           if not html_files:
               raise FileNotFoundError("Nenhum HTML encontrado")
           html_file = html_files[0]
@@ -104,7 +104,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          cp Auchan_Dashboard*.html index.html
-          git add Auchan_Dashboard*.html index.html
-          git diff --staged --quiet || git commit -m "auto: update auchan dashboard [skip ci]"
+          cp Dashboard_Auchan*.html index.html
+          git add Dashboard_Auchan*.html index.html
+          git diff --staged --quiet || git commit -m "auto: update dashboard [skip ci]"
           git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
