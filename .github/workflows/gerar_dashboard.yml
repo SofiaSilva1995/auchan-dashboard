@@ -25,8 +25,7 @@ jobs:
         run: |
           DATA=$(ls *.xlsx *.xlsb *.csv 2>/dev/null | grep -iv produtos | head -1)
           if [ -z "$DATA" ]; then
-            echo "Nenhum ficheiro de dados encontrado (.xlsx, .xlsb ou .csv)."
-            echo "Faz upload do ficheiro para a raiz do repo e commite."
+            echo "Sem ficheiro de dados novo — vai enviar index.html existente."
             echo "found=false" >> $GITHUB_OUTPUT
           else
             echo "Ficheiro encontrado: $DATA"
@@ -47,8 +46,11 @@ jobs:
         if: steps.check_data.outputs.found == 'true'
         run: python gerar_dashboard.py
 
+      - name: Preparar HTML para email
+        if: steps.check_data.outputs.found == 'false'
+        run: cp index.html Auchan_Dashboard.html
+
       - name: Enviar email
-        if: steps.check_data.outputs.found == 'true'
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
@@ -67,7 +69,7 @@ jobs:
 
           html_files = sorted(glob.glob("Auchan_Dashboard*.html"), reverse=True)
           if not html_files:
-              raise FileNotFoundError("Dashboard HTML nao encontrado")
+              raise FileNotFoundError("Nenhum HTML encontrado")
           html_file = html_files[0]
           size_mb   = os.path.getsize(html_file) / 1024 / 1024
           filename  = os.path.basename(html_file)
@@ -79,7 +81,7 @@ jobs:
 
           body = (
               "Ola,\n\n"
-              f"Em anexo o Auchan Sell-Out Dashboard actualizado ({size_mb:.1f} MB).\n\n"
+              f"Em anexo o Auchan Sell-Out Dashboard ({size_mb:.1f} MB).\n\n"
               "Abre directamente no browser."
           )
           msg.attach(MIMEText(body, "plain"))
@@ -102,7 +104,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          cp Auchan_Dashboard.html index.html
+          cp Auchan_Dashboard*.html index.html
           git add Auchan_Dashboard*.html index.html
           git diff --staged --quiet || git commit -m "auto: update auchan dashboard [skip ci]"
           git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
