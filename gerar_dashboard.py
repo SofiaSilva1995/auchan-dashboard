@@ -16,7 +16,7 @@ PF_LOGO_B64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 import glob as _glob
-_xlsx = sorted(_glob.glob('*.xlsx') + _glob.glob('*.xlsb'))
+_xlsx = sorted(_glob.glob('*.xlsx') + _glob.glob('*.xlsb') + _glob.glob('*.xls'))
 _csv  = sorted(_glob.glob('*.csv'))
 EXCEL = sys.argv[1] if len(sys.argv) > 1 else (_xlsx[0] if _xlsx else (_csv[0] if _csv else None))
 OUTPUT = sys.argv[2] if len(sys.argv) > 2 else f'Dashboard_Auchan_{datetime.now().strftime("%d_%m_%Y")}.html'
