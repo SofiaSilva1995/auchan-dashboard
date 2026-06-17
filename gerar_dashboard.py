@@ -19,7 +19,7 @@ import glob as _glob
 _xlsx = sorted(_glob.glob('*.xlsx') + _glob.glob('*.xlsb'))
 _csv  = [f for f in sorted(_glob.glob('*.csv')) if 'produtos' not in f.lower()]
 EXCEL = sys.argv[1] if len(sys.argv) > 1 else (_xlsx[0] if _xlsx else (_csv[0] if _csv else None))
-OUTPUT = sys.argv[2] if len(sys.argv) > 2 else 'Auchan_Dashboard.html'
+OUTPUT = sys.argv[2] if len(sys.argv) > 2 else f'Auchan_Dashboard_{datetime.now().strftime("%d_%m_%Y")}.html'
 
 BRAND_COLORS = {
     'AVENE':       '#4a9eda',
